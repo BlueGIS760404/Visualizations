@@ -9,8 +9,9 @@ def combine_images_equal(img_paths, save_path="combined_image_5_landscape.jpg"):
         int(A4_MM[0] * DPI / 25.4)   # height
     )
 
-    MARGIN = int(DPI * 0.6)   # ~1.5 cm margins
-    PADDING = int(DPI * 0.2)  # spacing between images (~0.5 cm)
+    MARGIN = int(DPI * 0.5)   # Reduced margins to make images bigger (~1.27 cm)
+    VERTICAL_PADDING = int(DPI * 0.4)  # Increased vertical spacing between rows (~1 cm)
+    HORIZONTAL_PADDING = int(DPI * 0.2)  # spacing between images in same row (~0.5 cm)
 
     if len(img_paths) != 5:
         raise ValueError("Exactly 5 image paths are required.")
@@ -33,16 +34,17 @@ def combine_images_equal(img_paths, save_path="combined_image_5_landscape.jpg"):
     available_width = A4_SIZE[0] - 2 * MARGIN
     available_height = A4_SIZE[1] - 2 * MARGIN
 
-    # Divide available height between two rows (equal row heights)
-    row_height = (available_height - PADDING) / rows
+    # Divide available height between two rows with more space for images
+    # Use 60% of height for images, 40% for spacing to make images bigger
+    total_image_height = available_height * 0.6
+    row_height = total_image_height / rows
 
     # Determine image size (same for all)
-    # We'll make width of top images slightly larger because there are fewer columns
-    # Compute smallest scale to ensure fit
-    width_top = (available_width - (cols_top - 1) * PADDING) / cols_top
-    width_bottom = (available_width - (cols_bottom - 1) * PADDING) / cols_bottom
-    img_width = min(width_top, width_bottom)
-    img_height = row_height
+    # Compute smallest scale to ensure fit but make images bigger
+    width_top = (available_width - (cols_top - 1) * HORIZONTAL_PADDING) / cols_top
+    width_bottom = (available_width - (cols_bottom - 1) * HORIZONTAL_PADDING) / cols_bottom
+    img_width = min(width_top, width_bottom) * 1.1  # Increase width by 10% to make images bigger
+    img_height = row_height * 1.1  # Increase height by 10% to make images bigger
 
     # Resize all images equally
     resized_images = []
@@ -66,22 +68,22 @@ def combine_images_equal(img_paths, save_path="combined_image_5_landscape.jpg"):
 
     # Top row (2 images)
     top_imgs = resized_images[:2]
-    total_width_top = sum(img.width for img in top_imgs) + PADDING
+    total_width_top = sum(img.width for img in top_imgs) + HORIZONTAL_PADDING
     x = (A4_SIZE[0] - total_width_top) // 2
     for img in top_imgs:
         y_offset = (row_height - img.height) / 2
         canvas.paste(img, (int(x), int(y + y_offset)))
-        x += img.width + PADDING
+        x += img.width + HORIZONTAL_PADDING
 
-    # Bottom row (3 images)
+    # Bottom row (3 images) - with increased vertical spacing
     bottom_imgs = resized_images[2:]
-    y += row_height + PADDING
-    total_width_bottom = sum(img.width for img in bottom_imgs) + 2 * PADDING
+    y += row_height + VERTICAL_PADDING  # Use the increased vertical padding
+    total_width_bottom = sum(img.width for img in bottom_imgs) + 2 * HORIZONTAL_PADDING
     x = (A4_SIZE[0] - total_width_bottom) // 2
     for img in bottom_imgs:
         y_offset = (row_height - img.height) / 2
         canvas.paste(img, (int(x), int(y + y_offset)))
-        x += img.width + PADDING
+        x += img.width + HORIZONTAL_PADDING
 
     # Save
     canvas.save(save_path, dpi=(DPI, DPI), quality=95, subsampling=0)
@@ -89,11 +91,11 @@ def combine_images_equal(img_paths, save_path="combined_image_5_landscape.jpg"):
 
 if __name__ == "__main__":
     image_paths = [
-        r"C:\Users\Reza\img1.png",
-        r"C:\Users\Reza\img2.png",
-        r"C:\Users\Reza\img3.png",
-        r"C:\Users\Reza\img4.png",
-        r"C:\Users\Reza\img5.png"
+        r"E:\PhD\Publication\Machine Learning-Driven Modeling of Urban Growth Patterns and Future Projections in the Greater Tehran Region\figure\administrative_facilities_kde_plot.png",
+        r"E:\PhD\Publication\Machine Learning-Driven Modeling of Urban Growth Patterns and Future Projections in the Greater Tehran Region\figure\commercial_facilities_kde_plot.png",
+        r"E:\PhD\Publication\Machine Learning-Driven Modeling of Urban Growth Patterns and Future Projections in the Greater Tehran Region\figure\educational_facilities_kde_plot.png",
+        r"E:\PhD\Publication\Machine Learning-Driven Modeling of Urban Growth Patterns and Future Projections in the Greater Tehran Region\figure\cultural_facilities_kde_plot.png",
+        r"E:\PhD\Publication\Machine Learning-Driven Modeling of Urban Growth Patterns and Future Projections in the Greater Tehran Region\figure\health_facilities_kde_plot.png",
     ]
 
     output_path = "final_5image_landscape_collage.jpg"
