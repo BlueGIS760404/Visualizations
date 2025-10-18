@@ -1,5 +1,5 @@
 import os
-from PIL import Image
+from PIL import Image, ImageChops
 
 def combine_images_equal(img_paths, save_path="combined_image_5_landscape.jpg"):
     DPI = 300
@@ -9,9 +9,9 @@ def combine_images_equal(img_paths, save_path="combined_image_5_landscape.jpg"):
         int(A4_MM[0] * DPI / 25.4)   # height
     )
 
-    MARGIN = int(DPI * 0.5)   # Reduced margins to make images bigger (~1.27 cm)
-    VERTICAL_PADDING = int(DPI * 0.4)  # Increased vertical spacing between rows (~1 cm)
-    HORIZONTAL_PADDING = int(DPI * 0.2)  # spacing between images in same row (~0.5 cm)
+    MARGIN = int(DPI * 0.5)           # Reduced margins (~1.27 cm)
+    VERTICAL_PADDING = int(DPI * 0.7) # Vertical spacing between rows (~1 cm)
+    HORIZONTAL_PADDING = int(DPI * 0.2)  # Spacing between images in same row (~0.5 cm)
 
     if len(img_paths) != 5:
         raise ValueError("Exactly 5 image paths are required.")
@@ -34,23 +34,18 @@ def combine_images_equal(img_paths, save_path="combined_image_5_landscape.jpg"):
     available_width = A4_SIZE[0] - 2 * MARGIN
     available_height = A4_SIZE[1] - 2 * MARGIN
 
-    # Divide available height between two rows with more space for images
-    # Use 60% of height for images, 40% for spacing to make images bigger
     total_image_height = available_height * 0.6
     row_height = total_image_height / rows
 
-    # Determine image size (same for all)
-    # Compute smallest scale to ensure fit but make images bigger
     width_top = (available_width - (cols_top - 1) * HORIZONTAL_PADDING) / cols_top
     width_bottom = (available_width - (cols_bottom - 1) * HORIZONTAL_PADDING) / cols_bottom
-    img_width = min(width_top, width_bottom) * 1.1  # Increase width by 10% to make images bigger
-    img_height = row_height * 1.1  # Increase height by 10% to make images bigger
+    img_width = min(width_top, width_bottom) * 1.1  # Increase width slightly
+    img_height = row_height * 1.1                   # Increase height slightly
 
     # Resize all images equally
     resized_images = []
     for img in images:
         img_ratio = img.width / img.height
-        # Adjust size preserving aspect ratio
         if img_ratio > img_width / img_height:
             new_width = int(img_width)
             new_height = int(img_width / img_ratio)
@@ -64,7 +59,6 @@ def combine_images_equal(img_paths, save_path="combined_image_5_landscape.jpg"):
 
     # --- Place images ---
     y = MARGIN
-    x_start = MARGIN
 
     # Top row (2 images)
     top_imgs = resized_images[:2]
@@ -75,9 +69,9 @@ def combine_images_equal(img_paths, save_path="combined_image_5_landscape.jpg"):
         canvas.paste(img, (int(x), int(y + y_offset)))
         x += img.width + HORIZONTAL_PADDING
 
-    # Bottom row (3 images) - with increased vertical spacing
+    # Bottom row (3 images)
     bottom_imgs = resized_images[2:]
-    y += row_height + VERTICAL_PADDING  # Use the increased vertical padding
+    y += row_height + VERTICAL_PADDING
     total_width_bottom = sum(img.width for img in bottom_imgs) + 2 * HORIZONTAL_PADDING
     x = (A4_SIZE[0] - total_width_bottom) // 2
     for img in bottom_imgs:
@@ -85,9 +79,16 @@ def combine_images_equal(img_paths, save_path="combined_image_5_landscape.jpg"):
         canvas.paste(img, (int(x), int(y + y_offset)))
         x += img.width + HORIZONTAL_PADDING
 
-    # Save
+    # --- Auto-crop extra white borders ---
+    bg = Image.new(canvas.mode, canvas.size, (255, 255, 255))
+    diff = ImageChops.difference(canvas, bg)
+    bbox = diff.getbbox()
+    if bbox:
+        canvas = canvas.crop(bbox)
+
+    # Save cropped result
     canvas.save(save_path, dpi=(DPI, DPI), quality=95, subsampling=0)
-    print(f"✅ 5-image collage saved to {save_path} ({A4_SIZE[0]}x{A4_SIZE[1]} px)")
+    print(f"✅ 5-image collage (cropped) saved to {save_path} ({canvas.size[0]}x{canvas.size[1]} px)")
 
 if __name__ == "__main__":
     image_paths = [
@@ -98,5 +99,5 @@ if __name__ == "__main__":
         r"E:\PhD\Publication\Machine Learning-Driven Modeling of Urban Growth Patterns and Future Projections in the Greater Tehran Region\figure\health_facilities_kde_plot.png",
     ]
 
-    output_path = "final_5image_landscape_collage.jpg"
+    output_path = "final_5image_landscape_collage_cropped.jpg"
     combine_images_equal(image_paths, output_path)
